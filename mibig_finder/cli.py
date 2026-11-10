@@ -1,0 +1,61 @@
+# │   ├── cli.py                 # Typer: spectra | structure | bgc | db
+"""mibig_finder/cli.py"""
+import typer
+from pathlib import Path
+from typing import Optional
+
+app = typer.Typer(help="MIBiG-Finder: match spectra and structures against a MIBiG-linked library.")
+
+
+@app.command()
+def spectra(
+    query: Path = typer.Argument(..., help="Query MGF file"),
+    database: Path = typer.Argument(..., help="Reference library MGF file"),
+    similarity: str = typer.Option("modified_cosine", help="Similarity function: modified_cosine or cosine"),
+    tolerance: float = typer.Option(0.02, help="Fragment peak tolerance (Da)"),
+    top_n: int = typer.Option(2, help="Top-N matches per query"),
+    threshold: float = typer.Option(0.7, help="Minimum similarity score"),
+    out_dir: Optional[Path] = typer.Option("./out", help="Output directory"),
+):
+    """Match query spectra against the reference library."""
+    from mibig_finder.config import SpectraSearchConfig
+    from mibig_finder.services import search_spectra
+
+    cfg = SpectraSearchConfig(
+        query=query,
+        database=database,
+        similarity=similarity,
+        tolerance=tolerance,
+        top_n=top_n,
+        sim_threshold=threshold,
+        out_dir=out_dir,
+    )
+    df = search_spectra(cfg)
+    typer.echo(df.to_string(index=False))
+
+
+@app.command()
+def structure(
+    query: Path = typer.Argument(..., help="SMILES file (CSV with 'smiles' column, or one per line)"),
+    database: Path = typer.Argument(..., help="Reference library MGF file"),
+    fps: str = typer.Option("morgan", help="Fingerprints, comma-separated: morgan,map4,rdkit"),
+    threshold: float = typer.Option(0.7, help="Minimum Tanimoto similarity"),
+    out_dir: Optional[Path] = typer.Option("./out", help="Output directory"),
+):
+    """Match query structures against SMILES in the reference library."""
+    from mibig_finder.config import StructureSearchConfig
+    from mibig_finder.services import search_structures
+
+    cfg = StructureSearchConfig(
+        query=query,
+        database=database,
+        fps=[f.strip() for f in fps.split(",")],
+        similarity_threshold=threshold,
+        out_dir=out_dir,
+    )
+    df = search_structures(cfg)
+    typer.echo(df.to_string(index=False))
+
+
+if __name__ == "__main__":
+    app()

@@ -1,0 +1,160 @@
+# src/mibig_finder/services.py
+"""Pure functions. CLI and future FastAPI both call these."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from mibig_finder import chem, spectra
+from mibig_finder.config import SpectraSearchConfig, StructureSearchConfig
+
+
+# ---------------------------------------------------------------------------
+# Spectra search
+# ---------------------------------------------------------------------------
+
+def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
+    """Load query + reference MGFs, score, return top-N matches above threshold."""
+    if cfg.clean:
+        cleaned_path = cfg.out_dir / "cleaned_queries.mgf"
+        cfg.out_dir.mkdir(parents=True, exist_ok=True)
+        queries = spectra.cleaning_spectra(cfg.query, str(cleaned_path))
+    else:
+        queries = spectra.load_mgf(cfg.query)
+    references = spectra.load_mgf(cfg.database)
+
+    scores = spectra.score(
+        queries=queries,
+        references=references,
+        similarity=cfg.similarity,
+        tolerance=cfg.tolerance,
+    )
+
+    score_arr = scores.to_array("score")      # (n_references, n_queries)
+    match_arr = scores.to_array("matches")
+
+    rows = []
+    for i, q in enumerate(queries):
+        q_id = q.metadata.get("scans") or q.metadata.get("feature_id") or i
+
+        col = score_arr[:, i]
+        order = np.argsort(col)[::-1]
+
+        kept = 0
+        for ref_idx in order:
+            score_val = float(col[ref_idx])
+            if score_val < cfg.sim_threshold:
+                break
+            kept += 1
+            ref = references[ref_idx]
+            rows.append({
+                "query_id": q_id,
+                "library_id": ref.metadata.get("spectrumid") or ref.metadata.get("title"),
+                "bgc_id": ref.metadata.get("bgc_match"),
+                "inchikey": ref.metadata.get("inchikey"),
+                "similarity": score_val,
+                "matched_peaks": int(match_arr[ref_idx, i]),
+                "rank": kept,
+            })
+            if kept >= cfg.top_n:
+                break
+
+    df = pd.DataFrame(rows).sort_values(["query_id", "similarity"], ascending=[True, False])
+    _maybe_write(df, cfg.out_dir, name="spectra_matches")
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Structure search
+# ---------------------------------------------------------------------------
+
+def search_structures(cfg: StructureSearchConfig) -> pd.DataFrame:
+    """Load query SMILES, score against reference library (SMILES pulled from MGF metadata)."""
+    queries = _read_smiles(cfg.query)                       # [(id, smiles), ...]
+    refs = _refs_from_mgf(cfg.database)                     # [(library_id, bgc_id, smiles), ...]
+
+    # precompute reference fingerprints per fp kind
+    ref_fps = {
+        kind: [(lib_id, bgc, chem.compute_fp(smi, kind)) for lib_id, bgc, smi in refs]
+        for kind in cfg.fps
+    }
+
+    rows = []
+    for qid, qsmi in queries:
+        if qsmi.lower() == "smiles":
+            continue
+        qsmi_c = chem.canonical_smiles(qsmi)
+        if qsmi_c is None:
+            continue
+        qkey = chem.inchikey14(qsmi_c)
+
+        per_kind = {kind: chem.compute_fp(qsmi_c, kind) for kind in cfg.fps}
+
+        for i, (lib_id, bgc, rsmi) in enumerate(refs):
+            sims = {}
+            for kind in cfg.fps:
+                q_fp = per_kind[kind]
+                r_fp = ref_fps[kind][i][2]
+                if q_fp is None or r_fp is None:
+                    continue
+                sims[kind] = chem.tanimoto(q_fp, r_fp)
+            if not sims:
+                continue
+            best = max(sims.values())
+            if best < cfg.similarity_threshold:
+                continue
+            rows.append({
+                "query_id": qid,
+                "query_inchikey14": qkey,
+                "library_id": lib_id,
+                "bgc_match": bgc,
+                "best_tanimoto": best,
+                **{f"tanimoto_{k}": v for k, v in sims.items()},
+            })
+
+        df = pd.DataFrame(rows)
+        if not df.empty:
+            df = df.sort_values(["query_id", "best_tanimoto"], ascending=[True, False])
+        _maybe_write(df, cfg.out_dir, name="structure_matches")
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+# src/mibig_finder/services.py
+
+import pandas as pd
+def _read_smiles(path: Path) -> list[tuple[str, str]]:
+    with path.open() as f:
+        lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+    if lines and lines[0].lower().startswith("smiles"):
+        lines = lines[1:]
+    if lines and ("," in lines[0] or "\t" in lines[0]):
+        sep = "," if "," in lines[0] else "\t"
+        rows = [l.split(sep) for l in lines]
+        if len(rows[0]) >= 2:
+            return [(r[0].strip(), r[1].strip()) for r in rows]
+    return [(smi, smi) for smi in lines]
+
+def _refs_from_mgf(path: Path) -> list[tuple[str, str | None, str]]:
+    """Pull (library_id, bgc_id, smiles) from each reference spectrum's metadata."""
+    out = []
+    for s in spectra.load_mgf(path):
+        smi = s.metadata.get("smiles") 
+        if not smi:
+            continue
+        lib_id = s.metadata.get("spectrum_id") or s.metadata.get("title") or ""
+        bgc = s.metadata.get("bgc_match")
+        out.append((lib_id, bgc, smi))
+    return out
+
+def _maybe_write(df: pd.DataFrame, out_dir: Path | None, name: str) -> None:
+    if out_dir is None:
+        return
+    out_dir.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_dir / f"{name}.csv", index=False)
+    df.to_parquet(out_dir / f"{name}.parquet", index=False)

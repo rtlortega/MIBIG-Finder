@@ -1,15 +1,23 @@
 [project]
-# basic information
-name = "your_project_name"
-description = "A description of your awesome Python project"
-authors = [
-  {name = "Your Name", email = "example@email.xyz"},
+name = "mibig-finder"
+version = "0.0.1"
+description = "Match MS/MS spectra and chemical structures against a MIBiG-linked library."
+requires-python = ">=3.11"
+dependencies = [
+    "matchms",
+    "rdkit",
+    "pandas",
+    "pyarrow",
+    "pydantic",
+    "typer",
 ]
 
-# This is the version of your project. You can increase the counter to indicate changes
-version = "0.1.0"
+[project.scripts]
+mibig-finder = "mibig_finder.cli:app"
 
-# it is nice to pin down the version used to develop the project
-requires-python = ">=3.9"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-readme = "README.md"
+[tool.hatch.build.targets.wheel]
+packages = ["mibig_finder"]

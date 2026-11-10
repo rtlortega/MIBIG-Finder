@@ -1,131 +1,79 @@
-❗❗ Replace this readme with a description of your project as soon as possible ❗❗
+# MIBiG-Finder
 
-# python-template-midi
-Hi! This is an intermediate template for Python projects. 
-The main purpose of this template is to introduce you to structuring your code like a package, and managing requirements.
-However, it is not intended to teach you how to write good code. 
-That part is up to you :)
+Match MS/MS spectra and chemical structures against a MIBiG-linked reference library.
 
+Reference library is built in [MIBIG-Spectra-Lib](https://github.com/vdhooftcompmet/MIBIG-Spectra-Lib). This repo is retrieval only.
 
-### Python templates
+## Install
 
-|        | link | Focus                             |
-|:------:|:----:|-----------------------------------|
-| 🐍     | [Mini](https://github.com/adraismawur/python-template-mini) | File and code structure |
-| 🐍🐍   | [Midi](https://github.com/adraismawur/python-template-midi) | Environments, Requirements and packaging |
-| 🐍🐍🐍 | [Maxi](https://github.com/adraismawur/python-template-maxi) | Testing, Automatic formatting and checks |
+```bash
+git clone https://github.com/vdhooftcompmet/mibig-finder.git
+cd mibig-finder
+pip install -r requirements-dev.txt    # matchms dev branch
+pip install -e .
+```
 
+Python ≥ 3.11. For `--fps map4`: `pip install map4 tmap`.
 
-### Table of contents:
+## Run
 
-- [Quick start](#quick-start)
-- [Why should I use this?](#why-should-i-use-this)
-- [What is included in this repository?](#what-is-included-in-this-repository)
-- [Guide to elements introduced here](#guide-to-elements-introduced-here)
+Spectra matching:
 
-## Quick start:
+```bash
+mibig-finder spectra -q query.mgf -d library.mgf -o out/
+```
 
-### Prerequisites
+Structure matching:
 
-❗ This template assumes you are familiar with the concepts explained in the [Mini template](https://github.com/adraismawur/python-template-mini)
+```bash
+mibig-finder structure -q structures.tsv -d library.mgf -o out/
+```
 
-❗ Furthermore, this template assumes you are somewhat familiar with:
+Options: `--tolerance` (0.02), `--similarity` (modified_cosine | cosine_flash), `--top-n` (2), `--sim-threshold` (0.7), `--fps` (morgan[,map4,rdkit]).
 
-- Pip, the python package manager (included with Python)
+Outputs: `*_matches.csv` and `*_matches.parquet` in `--out-dir`.
 
-### Set up the repository (local only)
+## Input expectations
 
-❕Choose this if you are just starting out, or if you do not want to create a page on Github for your code.
+Reference MGF metadata per spectrum: `SMILES`, `INCHIKEY`, `BGC_MATCH`, `BGC_SIMILARITY`, `SCANS`.
 
-1. On this GitHub page, click the **Code** dropdown button in the top-right
-2. Click Download ZIP
-3. Extract the files somewhere in a new directory
-4. Open a shell in the directory where you have extracted the files
-5. Edit the readme file to describe your project
-6. Run `git add .` to stage all files
-7. Run `git commit -m "initial commit"` to make your first commit
+Structure TSV: two columns, `id` and `smiles`, header row.
 
-### Set up a remote repository (on GitHub)
+### *Structure input can also be** — 
+one SMILES per line:
+CCO
+c1ccccc1O
+CC(=O)Oc1ccccc1C(=O)O
 
-❕Choose this if you want to ensure your code is always saved online, or if you want to share your code.
-
-1. Create a new repository of your own by pressing the green button in the top right named "use this template" -> Create a new repository.
-   Or [click here](https://github.com/new?template_name=python-template-midi&template_owner=adraismawur)
-2. Give your repository a nice name and description
-3. Choose whether you want the repository to be public (anyone can see your code), or private.
-4. Press "Create repository"
-
-You will be taken to your own github repository page after a few seconds.
-From here, you can make edits directly to your files, but it is more practical to download your repository to your local device. (cloning)
-
-1. On your github repository page, click the green button with the text "Code" in the top-right
-2. Copy the URL that starts with ```git@github.com:```
-3. On your device, open a terminal and navigate to a folder where you want your project to be stored
-4. Use the command ```git clone [git url from step 2]```
-
-Your repository will now appear in the folder you navigated to in step 3
-
-### Start coding!
-
-Generally, it is recommended to have the starting point of your code in a file with the name `main.py` inside a folder with the name `your_project_name`.
-In there, the `main()` function calls all other functions from separate folders (called modules).
-
-Things to consider while you do so:
-
-✅ Commit early, commit often  
-✅ Aim for ~300 lines of code max for a python file  
-✅ You do not have to use the template/ subfolder if you have only a few functions/files  
-✅ Have fun!  
+Or a TSV/CSV with a `smiles` column (and optional `id`).
 
 
-## Why should I use this?
+## Python API
 
-This template is intended to give you a nice start in managing the elements that your code depends on (requirements), and teaches you how to package your code.
-These elements will help you in the future if you want to make an application that is downloadable and installable by other people.
+```python
+from mibig_finder.config import SpectraSearchConfig
+from mibig_finder.services import search_spectra
 
-## What is included in this repository?
+df = search_spectra(SpectraSearchConfig(query=..., database=..., sim_threshold=0.7))
+```
 
-- Everything that is included in the [Mini repository](https://github.com/adraismawur/python-template-mini)
-  - A [README](#a-readme-file) file
-  - A (copyleft) [license](#a-license)
-  - A basic [folder structure](#folder-structure)
-  - A .gitignore file
-- A pyproject.toml file
-- A requirements.txt file
+Same pattern for `search_structures` / `StructureSearchConfig`.
 
-## Guide to elements introduced here
+## Test data
 
-### Requirements (requirements.txt)
+`tests/fixtures/` — 20-spectra library, 10-spectra query, 10 SMILES. Five of each are copies of library entries, so you should see ≈1.0 self-matches.
 
-When you write code, you will likely use external libraries to do certain tasks that are either complex, or you do not want to re-implement.
-Examples include [numpy](https://numpy.org/) for numerical computing, [pandas](https://pandas.pydata.org/) for numerical computing / data analysis and scikit for machine learning.
+```bash
+mibig-finder spectra -q tests/fixtures/query.mgf -d tests/fixtures/library.mgf -o out/
+```
 
-Anything your code depends on that is not part of your code or of the standard libraries included in Python, is a _dependency_. The set of _dependencies_ needed to run your code form the code's _requirements_.
+## Layout
+src/mibig_finder/
+├── cli.py
+├── config.py # typed configs
+├── database.py # load reference MGF
+├── spectra.py # MGF + similarity
+├── chem.py # fingerprints + Tanimoto
+└── services.py # search_spectra, search_structures
 
-To make your code reproducible on other machines, it is important to store:
-
-- What dependencies are needed
-- What version of those dependencies are needed
-
-It is important to store both these bits of information, as different versions of dependencies can have different capabilities, and may not work the same as the version that was used when your project was developed.
-
-### Packaging (pyproject.toml)
-
-Packaging is a broad term that involves the process of bundling your software and making it available to other people through distribution using some packaging system.
-
-Your software might not end up as a package that will be installed by other people, but the packaging capabilities of python's built in package manager help in describing your software and making it runnable from the command line if people choose to use your software in that way.
-
-### Your code as a package
-
-The combination of the requirements.txt and the pyproject.toml prepare your package in such a way that when a user installs the package using pip, your code can be run from anywhere (not only from the source directory).
-
-To try this, run ```pip install .``` in this directory.
-After installing the package, you should be able to run ```python -m your_project_name``` from anywhere.
-
-To remove the package you just installed, run ```pip uninstall your_project_name```
-
-### Using only the requirements.txt
-
-You may not want to install your code every time you make a change to the requirements.txt file.
-
-If you want to install just the requirements using the requirements.txt file, run ```pip install -r requirements.txt```
+Early development — API may change.
