@@ -9,8 +9,9 @@ app = typer.Typer(help="MIBiG-Finder: match spectra and structures against a MIB
 
 @app.command()
 def spectra(
-    query: Path = typer.Argument(..., help="Query MGF file"),
-    database: Path = typer.Argument(..., help="Reference library MGF file"),
+    query: Path = typer.Argument(..., help="Query MGF or Parquet file"),
+    database: Path = typer.Argument(..., help="Reference library MGF or Parquet file"),
+    bgc_links: Path = typer.Argument(..., help="BGC links CSV (spectrum_idx,bgc_id)"),
     similarity: str = typer.Option("modified_cosine", help="Similarity function: modified_cosine or cosine"),
     tolerance: float = typer.Option(0.02, help="Fragment peak tolerance (Da)"),
     top_n: int = typer.Option(2, help="Top-N matches per query"),
@@ -24,6 +25,7 @@ def spectra(
     cfg = SpectraSearchConfig(
         query=query,
         database=database,
+        bgc_links=bgc_links,          
         similarity=similarity,
         tolerance=tolerance,
         top_n=top_n,

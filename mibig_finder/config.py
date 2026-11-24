@@ -8,11 +8,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+_SPECTRA_EXTS = {".mgf", ".parquet"}
 
 class SpectraSearchConfig(BaseModel):
     query: Path
-    database: Path                                   # local MGF for now
-    tolerance: float = 0.02
+    bgc_links: Path  
+    database: Path 
+    tolerance: float = 0.02                                                      
     similarity: Literal["modified_cosine", "cosine_flash"] = "modified_cosine"
     top_n: int = 2
     sim_threshold: float = 0.7
@@ -21,11 +23,11 @@ class SpectraSearchConfig(BaseModel):
 
     @field_validator("query", "database")
     @classmethod
-    def _file_ok(cls, v: Path) -> Path:
+    def _spectra_file_ok(cls, v: Path) -> Path:
         if not v.exists():
             raise ValueError(f"file not found: {v}")
-        if v.suffix.lower() != ".mgf":
-            raise ValueError(f"expected .mgf, got {v.suffix}")
+        if v.suffix.lower() not in _SPECTRA_EXTS:
+            raise ValueError(f"expected .mgf or .parquet, got {v.suffix}")
         return v
 
     @field_validator("tolerance")
@@ -42,6 +44,14 @@ class SpectraSearchConfig(BaseModel):
             raise ValueError("sim_threshold must be in [0, 1]")
         return v
 
+    @field_validator("bgc_links")
+    @classmethod
+    def _file_ok(cls, v: Path) -> Path:
+            if not v.exists():
+                raise ValueError(f"file not found: {v}")
+            if v.suffix.lower() != ".csv":
+                raise ValueError(f"expected .csv, got {v.suffix}")
+            return v
 
 class StructureSearchConfig(BaseModel):
     query: Path
