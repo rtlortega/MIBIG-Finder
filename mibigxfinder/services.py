@@ -64,7 +64,7 @@ def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
     df = pd.DataFrame(rows)
 
     sep = "\t" if cfg.bgc_links.suffix.lower() == ".tsv" else ","
-    links = pd.read_csv(cfg.bgc_links, sep=sep)[["spectrum_idx", "bgc_id"]]
+    links = pd.read_csv(cfg.bgc_links, sep=sep)[["spectrum_idx", "bgc_id", "bgc_compound"]]
     links["spectrum_idx"] = links["spectrum_idx"].astype(str)
     df["library_id"] = df["library_id"].astype(str)
 
@@ -76,7 +76,8 @@ def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
 
     df = df.sort_values(["feature_id", "spectral similarity"], ascending=[True, False])
     df["rank"] = df.groupby("feature_id").cumcount() + 1
-    df = df[["feature_id", "library_id", "bgc_id", "inchikey", "spectral similarity", "matched_peaks", "rank"]]
+    df = df[["feature_id", "library_id", "bgc_id", "bgc_compound",
+            "inchikey", "spectral similarity", "matched_peaks", "rank"]]    
     _maybe_write(df, cfg.out_dir, name="spectra_matches")
     return df
 
