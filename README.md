@@ -7,9 +7,10 @@ Reference library is built in [MIBIG-Spectra-Lib](https://github.com/vdhooftcomp
 ## Install
 
 ```bash
-git clone https://github.com/vdhooftcompmet/mibig-finder.git
+conda create -n mibig-finder python=3.12 -y
+conda activate mibig-finder
+git clone https://github.com/rtlortega/MIBIG-Finder.git
 cd mibig-finder
-pip install -r requirements-dev.txt    # matchms dev branch
 pip install -e .
 ```
 
@@ -64,7 +65,10 @@ Same pattern for `search_structures` / `StructureSearchConfig`.
 `tests/fixtures/` — 20-spectra library, 10-spectra query, 10 SMILES. Five of each are copies of library entries, so you should see ≈1.0 self-matches.
 
 ```bash
-mibig-finder spectra -q tests/fixtures/query.mgf -d tests/fixtures/library.mgf -o out/
+mibig-finder spectra tests/fixtures/query_fake.mgf \
+    tests/fixtures/library_fake.mgf \
+    path/to/bgc_links.csv \
+    --out-dir out/
 ```
 
 ## Layout
