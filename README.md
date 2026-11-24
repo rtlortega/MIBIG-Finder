@@ -3,7 +3,7 @@
 ```bash
 conda create -n mibigxfinder python=3.12 -y
 conda activate mibigxfinder
-git clone https://github.com/vdhooftcompmet/mibig-finder.git
+git clone https://github.com/rtlortega/MIBIGxFinder.git
 cd mibigxfinder
 pip install -e .
 ```
