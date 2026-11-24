@@ -2,14 +2,33 @@
 name = "mibig-finder"
 version = "0.0.1"
 description = "Match MS/MS spectra and chemical structures against a MIBiG-linked library."
-requires-python = ">=3.11"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Rosina Torres Ortega", email = "rosina.torresortega@wur.nl" },
+    { name = "Annette Lien", email = "annette.lien@wur.nl" },
+    { name = "Joana Tirana", email = "joana.tirana@wur.nl" },
+]
+keywords = ["mibig", "mass-spectrometry", "metabolomics", "natural-products", "matchms"]
 dependencies = [
-    "matchms",
-    "rdkit",
-    "pandas",
-    "pyarrow",
-    "pydantic",
-    "typer",
+    "matchms>=1.0",
+    "rdkit>=2024.3",
+    "pandas>=2.0",
+    "pyarrow>=15.0",
+    "pydantic>=2.0",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "build",
+    "twine",
 ]
 
 [project.scripts]
