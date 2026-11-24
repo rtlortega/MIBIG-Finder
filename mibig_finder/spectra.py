@@ -6,11 +6,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from matchms import Spectrum, calculate_scores
-from matchms.importing import load_from_mgf #, load_from_parquet
+from matchms.importing import load_ms2_dataset, load_from_parquet
 from matchms.similarity import CosineGreedy, ModifiedCosine
 
 from matchms.filtering.default_pipelines import DEFAULT_FILTERS, CLEAN_PEAKS
-from matchms.filtering.SpectrumProcessor import SpectrumProcessor
+from matchms.filtering.spectrum_processor import SpectrumProcessor
+from matchms.filtering.spectra_processor import ProcessingReport
 from matchms.importing import load_from_mgf
 
 
@@ -20,35 +21,38 @@ similarity_funcs = {
     "cosine":          CosineGreedy,
 }
 
-
-def load_mgf(path: Path) -> list[Spectrum]:
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(path)
-    return list(load_from_mgf(str(path), metadata_harmonization=False))   # ← keep custom keys
-
-
-# def load_from_parquet(path: Path) -> list[Spectrum]: 
-#     path = Path(path)
-#     if not path.exists():
-#         raise FileNotFoundError(path)
-#     return list(load_from_parquet(str(path)))
+def load_spectra(path: Path) -> list[Spectrum]:
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(p)
+    if p.suffix.lower() == ".mgf":
+        return list(load_ms2_dataset(str(p), metadata_harmonization=False))
+    if p.suffix.lower() == ".parquet":
+        return list(load_from_parquet(str(p)))
+    raise ValueError(f"unsupported spectra format: {p.suffix}")
 
 def cleaning_spectra(MGF_FILE, CLEANED_SPECTRA_FILE):
-    spectra_list = list(load_from_mgf(MGF_FILE))
-    print(f"Loaded {len(spectra_list)} spectra from MGF.")
+    file_extension = Path(MGF_FILE).suffix.lower()
+
+    if file_extension == ".mgf":
+        spectra_list = list(load_ms2_dataset(MGF_FILE))
+    elif file_extension == ".parquet":
+        spectra_list = list(load_from_parquet(MGF_FILE))
+    else:
+        raise ValueError(f"Unsupported file format: {file_extension}")
+
+    print(f"Loaded {len(spectra_list)} spectra from {MGF_FILE}.")
 
     for idx, s in enumerate(spectra_list):
         if s.get("feature_id") is None:
             s.set("feature_id", idx + 1)
 
-    cleaned_spectra, _ = SpectrumProcessor(DEFAULT_FILTERS + CLEAN_PEAKS).process_spectra(
-        spectra_list,
-        cleaned_spectra_file=CLEANED_SPECTRA_FILE,
-        create_report=True,
-    )
-    print("Spectra left after cleaning:", len(cleaned_spectra))
-    return cleaned_spectra
+    report = ProcessingReport()
+    cleaned = SpectrumProcessor(DEFAULT_FILTERS + CLEAN_PEAKS).process_spectra(
+            spectra_list, processing_report=report
+        )
+    print(report)
+    return cleaned
 
 
 def harmonizing_spectra(MGF_FILE, HARMONIZED_SPECTRA_FILE):
@@ -59,13 +63,12 @@ def harmonizing_spectra(MGF_FILE, HARMONIZED_SPECTRA_FILE):
         if s.get("feature_id") is None:
             s.set("feature_id", idx + 1)
 
-    harmonized_spectra, _ = SpectrumProcessor(DEFAULT_FILTERS).process_spectra(
-        spectra_list,
-        cleaned_spectra_file=HARMONIZED_SPECTRA_FILE,
-        create_report=True,
-    )
-    print("Spectra left after harmonization:", len(harmonized_spectra))
-    return harmonized_spectra
+    report = ProcessingReport()
+    harmonized = SpectrumProcessor(DEFAULT_FILTERS).process_spectra(
+                spectra_list, processing_report=report
+            )
+    print(report)
+    return harmonized
 
 
 def score(

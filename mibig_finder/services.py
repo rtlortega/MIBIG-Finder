@@ -23,8 +23,8 @@ def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
         cfg.out_dir.mkdir(parents=True, exist_ok=True)
         queries = spectra.cleaning_spectra(cfg.query, str(cleaned_path))
     else:
-        queries = spectra.load_mgf(cfg.query)
-    references = spectra.load_mgf(cfg.database)
+        queries = spectra.load_spectra(cfg.query)
+    references = spectra.load_spectra(cfg.database) 
 
     scores = spectra.score(
         queries=queries,
@@ -51,18 +51,31 @@ def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
             kept += 1
             ref = references[ref_idx]
             rows.append({
-                "query_id": q_id,
-                "library_id": ref.metadata.get("spectrumid") or ref.metadata.get("title"),
-                "bgc_id": ref.metadata.get("bgc_match"),
+                "feature_id": q_id,
+                "library_id": ref.metadata.get("spectrum_id") or ref.metadata.get("spectrum_idx"),
                 "inchikey": ref.metadata.get("inchikey"),
-                "similarity": score_val,
+                "spectral similarity": score_val,
                 "matched_peaks": int(match_arr[ref_idx, i]),
                 "rank": kept,
             })
             if kept >= cfg.top_n:
                 break
 
-    df = pd.DataFrame(rows).sort_values(["query_id", "similarity"], ascending=[True, False])
+    df = pd.DataFrame(rows)
+
+    links = pd.read_csv(cfg.bgc_links)[["spectrum_idx", "bgc_id"]]
+    links["spectrum_idx"] = links["spectrum_idx"].astype(str)
+    df["library_id"] = df["library_id"].astype(str)
+
+    df = df.merge(
+        links,
+        left_on="library_id", right_on="spectrum_idx",
+        how="left",
+    ).drop(columns=["spectrum_idx"])
+
+    df = df.sort_values(["feature_id", "spectral similarity"], ascending=[True, False])
+    df["rank"] = df.groupby("feature_id").cumcount() + 1
+    df = df[["feature_id", "library_id", "bgc_id", "inchikey", "spectral similarity", "matched_peaks", "rank"]]
     _maybe_write(df, cfg.out_dir, name="spectra_matches")
     return df
 
@@ -143,7 +156,7 @@ def _read_smiles(path: Path) -> list[tuple[str, str]]:
 def _refs_from_mgf(path: Path) -> list[tuple[str, str | None, str]]:
     """Pull (library_id, bgc_id, smiles) from each reference spectrum's metadata."""
     out = []
-    for s in spectra.load_mgf(path):
+    for s in spectra.load_spectra(path):
         smi = s.metadata.get("smiles") 
         if not smi:
             continue
