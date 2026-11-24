@@ -50,9 +50,9 @@ mibig-finder structure query_smiles.csv tests/fixtures/library_fake.mgf --out-di
 
 Plain CSV, at least these two columns (other columns are ignored):
 ```csv
-spectrum_idx,bgc_id
-7,BGC0001082
-7,BGC0003163
-11,BGC0002033
+spectrum_idx,bgc_id,tanimoto
+7,BGC0001082,1.0
+7,BGC0003163,0.5
+11,BGC0002033,0.7
 ```
 `spectrum_idx` must match the library spectra's `SPECTRUM_IDX` (or `SPECTRUM_ID`) metadata.
