@@ -1,5 +1,5 @@
 # │   ├── cli.py                 # Typer: spectra | structure | bgc | db
-"""mibig_finder/cli.py"""
+"""mibigxfinder/cli.py"""
 import typer
 from pathlib import Path
 from typing import Optional
@@ -19,8 +19,8 @@ def spectra(
     out_dir: Optional[Path] = typer.Option("./out", help="Output directory"),
 ):
     """Match query spectra against the reference library."""
-    from mibig_finder.config import SpectraSearchConfig
-    from mibig_finder.services import search_spectra
+    from mibigxfinder.config import SpectraSearchConfig
+    from mibigxfinder.services import search_spectra
 
     cfg = SpectraSearchConfig(
         query=query,
@@ -45,8 +45,8 @@ def structure(
     out_dir: Optional[Path] = typer.Option("./out", help="Output directory"),
 ):
     """Match query structures against SMILES in the reference library."""
-    from mibig_finder.config import StructureSearchConfig
-    from mibig_finder.services import search_structures
+    from mibigxfinder.config import StructureSearchConfig
+    from mibigxfinder.services import search_structures
 
     cfg = StructureSearchConfig(
         query=query,

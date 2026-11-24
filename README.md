@@ -1,10 +1,10 @@
 ## Install
 
 ```bash
-conda create -n mibig-finder python=3.12 -y
-conda activate mibig-finder
+conda create -n mibigxfinder python=3.12 -y
+conda activate mibigxfinder
 git clone https://github.com/vdhooftcompmet/mibig-finder.git
-cd mibig-finder
+cd mibigxfinder
 pip install -e .
 ```
 
@@ -15,7 +15,7 @@ pip install -e .
 Match query MS/MS spectra against the reference library and annotate hits with BGC IDs.
 
 ```bash
-mibig-finder spectra \
+mibigxfinder spectra \
     tests/fixtures/query_fake.mgf \
     tests/fixtures/library_fake.mgf \
     tests/fixtures/bgc_links.csv \
@@ -43,7 +43,7 @@ Output columns: `feature_id, library_id, bgc_id, inchikey, similarity, matched_p
 ### Structure search
 
 ```bash
-mibig-finder structure query_smiles.csv tests/fixtures/library_fake.mgf --out-dir out/
+mibigxfinder structure query_smiles.csv tests/fixtures/library_fake.mgf --out-dir out/
 ```
 
 ### BGC-links file format

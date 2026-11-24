@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from mibig_finder import chem, spectra
-from mibig_finder.config import SpectraSearchConfig, StructureSearchConfig
+from mibigxfinder import chem, spectra
+from mibigxfinder.config import SpectraSearchConfig, StructureSearchConfig
 
 
 # ---------------------------------------------------------------------------
