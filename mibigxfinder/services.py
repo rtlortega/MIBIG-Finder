@@ -63,7 +63,8 @@ def search_spectra(cfg: SpectraSearchConfig) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
 
-    links = pd.read_csv(cfg.bgc_links)[["spectrum_idx", "bgc_id"]]
+    sep = "\t" if cfg.bgc_links.suffix.lower() == ".tsv" else ","
+    links = pd.read_csv(cfg.bgc_links, sep=sep)[["spectrum_idx", "bgc_id"]]
     links["spectrum_idx"] = links["spectrum_idx"].astype(str)
     df["library_id"] = df["library_id"].astype(str)
 

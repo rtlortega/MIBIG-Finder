@@ -47,11 +47,12 @@ class SpectraSearchConfig(BaseModel):
     @field_validator("bgc_links")
     @classmethod
     def _file_ok(cls, v: Path) -> Path:
-            if not v.exists():
-                raise ValueError(f"file not found: {v}")
-            if v.suffix.lower() != ".csv":
-                raise ValueError(f"expected .csv, got {v.suffix}")
-            return v
+        if not v.exists():
+            raise ValueError(f"file not found: {v}")
+        if v.suffix.lower() not in {".csv", ".tsv"}:
+            raise ValueError(f"expected .csv or .tsv, got {v.suffix}")
+        return v
+
 
 class StructureSearchConfig(BaseModel):
     query: Path
